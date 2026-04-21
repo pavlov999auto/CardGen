@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AD Auto Export — Генератор карточек</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: #f5f4f0;
+    color: #1a1a1a;
+    min-height: 100vh;
+  }
+
+  header {
+    background: #111;
+    color: #fff;
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header .logo { font-size: 15px; font-weight: 600; letter-spacing: 0.5px; }
+  header .sub { font-size: 11px; color: #555; margin-top: 2px; }
+
+  .layout {
+    display: flex;
+    gap: 24px;
+    padding: 24px 28px;
+    align-items: flex-start;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .form-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+  .preview-col { width: 380px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; position: sticky; top: 24px; }
+
+  .sect {
+    background: #fff;
+    border: 1px solid #e8e8e4;
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .sect-title {
+    font-size: 10px;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: #999;
+    margin-bottom: 12px;
+  }
+
+  label.lbl { font-size: 11px; color: #888; display: block; margin-bottom: 3px; }
+
+  input[type=text], select, textarea {
+    width: 100%;
+    font-size: 13px;
+    padding: 7px 10px;
+    border: 1px solid #e0e0da;
+    border-radius: 7px;
+    background: #fafaf8;
+    color: #1a1a1a;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type=text]:focus, select:focus, textarea:focus { border-color: #aaa; background: #fff; }
+  textarea { resize: vertical; line-height: 1.5; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .btn {
+    font-size: 12px;
+    padding: 7px 14px;
+    border: 1px solid #ddd;
+    border-radius: 7px;
+    background: transparent;
+    color: #555;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.12s;
+  }
+  .btn:hover { background: #f0efeb; }
+  .btn-primary { border-color: #bbb; color: #111; font-weight: 500; }
+  .btn-danger { color: #c0392b; border-color: #f0c0bb; }
+  .btn-danger:hover { background: #fff0ee; }
+  .btn-full { width: 100%; }
+  .btn-screenshot {
+    width: 100%;
+    background: #111;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .btn-screenshot:hover { background: #2a2a2a; }
+
+  .price-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .price-row input[type=text] { flex: 1; }
+  .price-row .price-val { width: 100px; }
+  .price-row select { width: 80px; }
+
+  .photo-thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .thumb-wrap { position: relative; cursor: pointer; }
+  .thumb-wrap img { width: 68px; height: 52px; object-fit: cover; border-radius: 6px; border: 2px solid transparent; display: block; }
+  .thumb-wrap.active img { border-color: #e8c060; }
+  .thumb-del {
+    position: absolute; top: -5px; right: -5px;
+    width: 17px; height: 17px;
+    background: #c0392b; color: #fff;
+    border-radius: 50%; font-size: 9px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border: none;
+  }
+  .hint { font-size: 10px; color: #aaa; margin-top: 6px; line-height: 1.5; }
+
+  .preview-label { font-size: 10px; color: #aaa; letter-spacing: 1.5px; text-transform: uppercase; }
+
+  /* ===== CARD STYLES ===== */
+  .card {
+    width: 360px;
+    background: #111;
+    border-radius: 14px;
+    overflow: hidden;
+    color: #fff;
+    border: 1px solid #222;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+  }
+  .card-header {
+    background: #0c0c0c;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #1c1c1c;
+  }
+  .card-brand { font-size: 13px; font-weight: 600; color: #e0e0e0; }
+  .card-sub { font-size: 10px; color: #555; margin-top: 1px; }
+  .card-badge {
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .badge-green { background: #0f2e0f; color: #5dc85d; }
+  .badge-amber { background: #2e2200; color: #c8a030; }
+  .card-photo-main { height: 190px; overflow: hidden; }
+  .card-photo-main img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card-photo-strip { display: flex; gap: 2px; height: 80px; }
+  .card-photo-strip img { flex: 1; min-width: 0; object-fit: cover; display: block; }
+  .card-no-photo {
+    height: 150px;
+    background: #181818;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+    font-size: 13px;
+  }
+  .card-title-block { padding: 10px 16px 8px; border-bottom: 1px solid #1a1a1a; }
+  .card-title { font-size: 19px; font-weight: 700; line-height: 1.2; }
+  .card-trim { font-size: 11px; color: #888; margin-top: 4px; line-height: 1.5; white-space: pre-line; }
+  .card-specs {
+    padding: 9px 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .spec-label { font-size: 9px; color: #4a4a4a; letter-spacing: 1.2px; text-transform: uppercase; }
+  .spec-val { font-size: 11px; color: #bbb; margin-top: 2px; line-height: 1.3; }
+  .card-prices { padding: 9px 16px; border-bottom: 1px solid #1a1a1a; }
+  .prices-title { font-size: 9px; color: #4a4a4a; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .price-line { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+  .price-city { font-size: 12px; color: #666; }
+  .price-amount { font-size: 14px; color: #e8c060; font-weight: 700; }
+  .card-notes { padding: 7px 16px; border-bottom: 1px solid #1a1a1a; }
+  .notes-text { font-size: 11px; color: #666; line-height: 1.5; white-space: pre-line; }
+  .card-footer {
+    padding: 10px 16px;
+    background: #090909;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer-url { font-size: 10px; color: #444; }
+  .footer-tag { font-size: 9px; color: #333; letter-spacing: 0.8px; }
+
+  /* ===== SCREENSHOT MODE ===== */
+  #screenshotMode {
+    display: none;
+    min-height: 100vh;
+    background: #050505;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 24px;
+  }
+  #screenshotMode.active { display: flex; }
+  #mainLayout.hidden { display: none; }
+  .screenshot-hint { font-size: 11px; color: #444; letter-spacing: 2px; text-transform: uppercase; }
+  .back-btn {
+    background: transparent;
+    border: 1px solid #2a2a2a;
+    color: #555;
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+  }
+  .back-btn:hover { color: #888; }
+
+  @media (max-width: 780px) {
+    .layout { flex-direction: column; }
+    .preview-col { width: 100%; position: static; }
+    .card { width: 100%; max-width: 360px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">AD Auto Export</div>
+    <div class="sub">Генератор карточек · adauto.ca</div>
+  </div>
+</header>
+
+<div id="mainLayout">
+  <div class="layout">
+
+    <!-- FORM -->
+    <div class="form-col">
+
+      <div class="sect">
+        <div class="sect-title">Автомобиль</div>
+        <div class="grid2">
+          <div><label class="lbl">Марка</label><input type="text" id="f_make" value="Toyota" /></div>
+          <div><label class="lbl">Модель</label><input type="text" id="f_model" value="4Runner" /></div>
+          <div><label class="lbl">Год</label><input type="text" id="f_year" value="2026" /></div>
+          <div><label class="lbl">Двигатель</label><input type="text" id="f_engine" value="2.4L Turbo, 278 л.с." /></div>
+          <div><label class="lbl">Цвет кузова</label><input type="text" id="f_colorExt" value="Чёрный" /></div>
+          <div><label class="lbl">Цвет салона</label><input type="text" id="f_colorInt" value="Чёрная кожа" /></div>
+        </div>
+        <div style="margin-top:10px;">
+          <label class="lbl">Комплектация и доп. опции</label>
+          <textarea id="f_trim" rows="3" placeholder="Limited 7-Passenger&#10;Мониторы задних пассажиров&#10;Панорамная крыша...">Limited 7-Passenger</textarea>
+        </div>
+        <div style="margin-top:10px;">
+          <label class="lbl">Статус</label>
+          <select id="f_condition">
+            <option>В наличии Канада</option>
+            <option>В наличии США</option>
+            <option>Под заказ</option>
+            <option>В пути</option>
+            <option>На складе</option>
+          </select>
+        </div>
+        <div style="margin-top:10px;">
+          <label class="lbl">Примечания</label>
+          <textarea id="f_notes" rows="2" placeholder="Ready to go, MSRP $82,175 CAD, фиксированная цена..."></textarea>
+        </div>
+      </div>
+
+      <div class="sect">
+        <div class="sect-title">Фотографии</div>
+        <button class="btn btn-primary" onclick="document.getElementById('photoInput').click()">+ Добавить фото</button>
+        <input id="photoInput" type="file" accept="image/*" multiple style="display:none" onchange="handleFiles(this.files)" />
+        <div id="photosSection"></div>
+      </div>
+
+      <div class="sect">
+        <div class="sect-title">Цены</div>
+        <div id="pricesSection"></div>
+        <button class="btn" onclick="addPrice()">+ Добавить город</button>
+      </div>
+
+    </div>
+
+    <!-- PREVIEW -->
+    <div class="preview-col">
+      <div class="preview-label">Превью карточки</div>
+      <div id="cardPreview"></div>
+      <button class="btn-screenshot" onclick="showScreenshot()">Скриншот-режим ↗</button>
+      <p class="hint" style="text-align:center;">Нажмите → сделайте скриншот экрана → отправьте в WhatsApp</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- SCREENSHOT MODE -->
+<div id="screenshotMode">
+  <div class="screenshot-hint">Скриншот этой области → WhatsApp</div>
+  <div id="screenshotCard"></div>
+  <button class="back-btn" onclick="hideScreenshot()">← Назад к редактору</button>
+</div>
+
+<script>
+  const CURRENCIES = ["USD","CAD","RUB","GEL","KZT","AED"];
+  const CITY_LIST = ["Торонто (EXW)","Тбилиси","Поти","Москва","Алматы","Бишкек","Ереван","Роттердам"];
+
+  let photos = [];
+  let mainPhoto = 0;
+  let prices = [{ city: "Торонто (EXW)", price: "65,000", currency: "USD" }];
+
+  function getState() {
+    return {
+      make:       document.getElementById("f_make").value.trim(),
+      model:      document.getElementById("f_model").value.trim(),
+      year:       document.getElementById("f_year").value.trim(),
+      engine:     document.getElementById("f_engine").value.trim(),
+      colorExt:   document.getElementById("f_colorExt").value.trim(),
+      colorInt:   document.getElementById("f_colorInt").value.trim(),
+      trim:       document.getElementById("f_trim").value.trim(),
+      condition:  document.getElementById("f_condition").value,
+      notes:      document.getElementById("f_notes").value.trim(),
+    };
+  }
+
+  function buildCard(s) {
+    const validPrices = prices.filter(p => p.city || p.price);
+    const specs = [
+      ["Двигатель", s.engine],
+      ["Кузов",     s.colorExt],
+      ["Салон",     s.colorInt],
+    ].filter(([,v]) => v);
+
+    const isAvail = s.condition.includes("наличии") || s.condition.includes("складе");
+    const badgeClass = isAvail ? "badge-green" : "badge-amber";
+
+    let photoHTML;
+    if (photos.length === 0) {
+      photoHTML = `<div class="card-no-photo">Фото не добавлено</div>`;
+    } else {
+      const extras = photos.filter((_, i) => i !== mainPhoto).slice(0, 3);
+      const strip = extras.length > 0
+        ? `<div class="card-photo-strip">${extras.map(src => `<img src="${src}" alt="" />`).join("")}</div>`
+        : "";
+      photoHTML = `<div class="card-photo-main"><img src="${photos[mainPhoto]}" alt="" /></div>${strip}`;
+    }
+
+    const specsHTML = specs.length > 0
+      ? `<div class="card-specs">${specs.map(([l,v]) =>
+          `<div><div class="spec-label">${l}</div><div class="spec-val">${v}</div></div>`
+        ).join("")}</div>` : "";
+
+    const pricesHTML = validPrices.length > 0
+      ? `<div class="card-prices">
+          <div class="prices-title">Цены</div>
+          ${validPrices.map(p =>
+            `<div class="price-line">
+              <span class="price-city">${p.city}</span>
+              <span class="price-amount">${p.price} ${p.currency}</span>
+            </div>`
+          ).join("")}
+        </div>` : "";
+
+    const notesHTML = s.notes
+      ? `<div class="card-notes"><div class="notes-text">${s.notes.replace(/</g,"&lt;")}</div></div>` : "";
+
+    const trimHTML = s.trim
+      ? `<div class="card-trim">${s.trim.replace(/</g,"&lt;")}</div>` : "";
+
+    return `
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-brand">AD Auto Export</div>
+      <div class="card-sub">adauto.ca · Toronto, Canada</div>
+    </div>
+    <div class="card-badge ${badgeClass}">${s.condition}</div>
+  </div>
+  ${photoHTML}
+  <div class="card-title-block">
+    <div class="card-title">${s.year} ${s.make} ${s.model}</div>
+    ${trimHTML}
+  </div>
+  ${specsHTML}
+  ${pricesHTML}
+  ${notesHTML}
+  <div class="card-footer">
+    <span class="footer-url">www.adauto.ca</span>
+    <span class="footer-tag">NEW · DEALER DIRECT</span>
+  </div>
+</div>`;
+  }
+
+  function updateCard() {
+    const s = getState();
+    document.getElementById("cardPreview").innerHTML = buildCard(s);
+  }
+
+  function handleFiles(files) {
+    Array.from(files).forEach(f => {
+      const r = new FileReader();
+      r.onload = e => { photos.push(e.target.result); renderPhotos(); updateCard(); };
+      r.readAsDataURL(f);
+    });
+  }
+
+  function removePhoto(i) {
+    photos.splice(i, 1);
+    if (mainPhoto >= photos.length) mainPhoto = 0;
+    renderPhotos(); updateCard();
+  }
+
+  function setMain(i) { mainPhoto = i; renderPhotos(); updateCard(); }
+
+  function renderPhotos() {
+    const el = document.getElementById("photosSection");
+    if (photos.length === 0) { el.innerHTML = ""; return; }
+    el.innerHTML = `
+      <div class="photo-thumbs">
+        ${photos.map((src, i) => `
+        <div class="thumb-wrap ${i === mainPhoto ? "active" : ""}" onclick="setMain(${i})">
+          <img src="${src}" alt="" />
+          <button class="thumb-del" onclick="event.stopPropagation();removePhoto(${i})">✕</button>
+        </div>`).join("")}
+      </div>
+      <div class="hint">Нажмите на фото — выбрать главное (золотая рамка)</div>`;
+  }
+
+  function addPrice() {
+    prices.push({ city: "", price: "", currency: "USD" });
+    renderPrices();
+  }
+
+  function removePrice(i) {
+    prices.splice(i, 1);
+    renderPrices(); updateCard();
+  }
+
+  function renderPrices() {
+    const el = document.getElementById("pricesSection");
+    const cityOptions = CITY_LIST.map(c => `<option value="${c}">`).join("");
+    el.innerHTML = `
+      <datalist id="citylist">${cityOptions}</datalist>
+      ${prices.map((p, i) => `
+      <div class="price-row">
+        <input type="text" list="citylist" value="${p.city}" placeholder="Город / условие"
+          oninput="prices[${i}].city=this.value;updateCard()" />
+        <input type="text" class="price-val" value="${p.price}" placeholder="Цена"
+          oninput="prices[${i}].price=this.value;updateCard()" />
+        <select onchange="prices[${i}].currency=this.value;updateCard()">
+          ${CURRENCIES.map(c => `<option ${c===p.currency?"selected":""}>${c}</option>`).join("")}
+        </select>
+        <button class="btn btn-danger" onclick="removePrice(${i})">✕</button>
+      </div>`).join("")}`;
+  }
+
+  function showScreenshot() {
+    const s = getState();
+    document.getElementById("screenshotCard").innerHTML = buildCard(s);
+    document.getElementById("mainLayout").classList.add("hidden");
+    document.getElementById("screenshotMode").classList.add("active");
+    window.scrollTo(0, 0);
+  }
+
+  function hideScreenshot() {
+    document.getElementById("screenshotMode").classList.remove("active");
+    document.getElementById("mainLayout").classList.remove("hidden");
+  }
+
+  // Bind all form fields to updateCard
+  ["f_make","f_model","f_year","f_engine","f_colorExt","f_colorInt","f_trim","f_condition","f_notes"]
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("input", updateCard);
+    });
+
+  // Init
+  renderPhotos();
+  renderPrices();
+  updateCard();
+</script>
+</body>
+</html>
